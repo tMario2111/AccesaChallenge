@@ -10,10 +10,10 @@ public class Product {
     @Id
     private Long productId;
 
-    private String productName;
-    private String productCategory;
+    private String name;
+    private String category;
     private String brand;
-    private Integer packageQuantity;
+    private Double packageQuantity;
     private String packageUnit;
 
     @OneToMany(mappedBy = "product")
@@ -30,20 +30,20 @@ public class Product {
         this.productId = productId;
     }
 
-    public String getProductName() {
-        return productName;
+    public String getName() {
+        return name;
     }
 
-    public void setProductName(String productName) {
-        this.productName = productName;
+    public void setName(String productName) {
+        this.name = productName;
     }
 
-    public String getProductCategory() {
-        return productCategory;
+    public String getCategory() {
+        return category;
     }
 
-    public void setProductCategory(String productCategory) {
-        this.productCategory = productCategory;
+    public void setCategory(String productCategory) {
+        this.category = productCategory;
     }
 
     public String getBrand() {
@@ -54,11 +54,11 @@ public class Product {
         this.brand = brand;
     }
 
-    public Integer getPackageQuantity() {
+    public Double getPackageQuantity() {
         return packageQuantity;
     }
 
-    public void setPackageQuantity(Integer packageQuantity) {
+    public void setPackageQuantity(Double packageQuantity) {
         this.packageQuantity = packageQuantity;
     }
 

@@ -29,4 +29,8 @@ public class Store {
     public String getStoreName() {
         return storeName;
     }
+
+    public void setStoreName(String storeName) {
+        this.storeName = storeName;
+    }
 }
