@@ -15,6 +15,12 @@ public class PriceId implements Serializable {
     public PriceId() {
     }
 
+    public PriceId(Long productId, Long storeId, LocalDate date) {
+        this.productId = productId;
+        this.storeId = storeId;
+        this.date = date;
+    }
+
     public LocalDate getDate() {
         return date;
     }

@@ -38,4 +38,12 @@ public class Discount {
     public void setDiscountPercentage(BigDecimal discountPercentage) {
         this.discountPercentage = discountPercentage;
     }
+
+    public void setProduct(Product product) {
+        this.product = product;
+    }
+
+    public void setStore(Store store) {
+        this.store = store;
+    }
 }
