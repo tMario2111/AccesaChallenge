@@ -1,6 +1,10 @@
 package com.example.accesachallenge.controller;
 
+import com.example.accesachallenge.dto.DiscountDTO;
 import com.example.accesachallenge.dto.ProductDTO;
+import com.example.accesachallenge.model.Price;
+import com.example.accesachallenge.model.PriceId;
+import com.example.accesachallenge.repository.DiscountRepository;
 import com.example.accesachallenge.repository.PriceRepository;
 import com.example.accesachallenge.repository.ProductRepository;
 import com.example.accesachallenge.repository.StoreRepository;
@@ -12,11 +16,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api")
@@ -25,12 +27,19 @@ public class ShoppingController {
     private final StoreRepository storeRepository;
     private final ProductRepository productRepository;
     private final PriceRepository priceRepository;
+    private final DiscountRepository discountRepository;
+
+    // TODO: Don't hardcode date
+    private final String currentDate = "2025-05-01";
 
     public ShoppingController(StoreRepository storeRepository,
-                              ProductRepository productRepository, PriceRepository priceRepository) {
+                              ProductRepository productRepository,
+                              PriceRepository priceRepository,
+                              DiscountRepository discountRepository) {
         this.storeRepository = storeRepository;
         this.productRepository = productRepository;
         this.priceRepository = priceRepository;
+        this.discountRepository = discountRepository;
     }
 
     @PostMapping(value = "/optimize-shopping-list",
@@ -43,9 +52,9 @@ public class ShoppingController {
             if (product.isEmpty()) {
                 continue;
             }
-            // TODO: Don't hardcode date
+
             var result = priceRepository.findCheapestPriceWithDiscounts(Long.parseLong(productId.substring(1)),
-                    LocalDate.parse("2025-05-01"));
+                    LocalDate.parse(currentDate));
             if (result.isEmpty()) {
                 continue;
             }
@@ -66,6 +75,51 @@ public class ShoppingController {
             }
             response.get(store.get().getStoreName()).add(productDTO);
         }
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping(value = "/best-discounts",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<DiscountDTO>> bestDiscounts() {
+        List<DiscountDTO> response = new ArrayList<>();
+        var result = discountRepository.findBestDiscounts(LocalDate.parse(currentDate));
+
+        for (var row : result) {
+            var product = productRepository.findProductByProductId((Long) row[3]);
+            if (product.isEmpty()) {
+                continue;
+            }
+            var store = storeRepository.findById((Long) row[4]);
+            if (store.isEmpty()) {
+                continue;
+            }
+            var price = priceRepository.findPriceById(new PriceId(product.get().getProductId(), store.get().getStoreId(),
+                    LocalDate.parse(currentDate)));
+            if (price.isEmpty()) {
+                continue;
+            }
+            BigDecimal discountPercentage = (BigDecimal) row[2];
+            BigDecimal multiplier = BigDecimal.ONE.subtract(
+                    discountPercentage.divide(BigDecimal.valueOf(100),
+                            2, RoundingMode.HALF_UP)
+            );
+            BigDecimal discountedPrice = price.get().getPrice().multiply(multiplier);
+            response.add(new DiscountDTO(
+                    store.get().getStoreName(),
+                    "P" + product.get().getProductId(),
+                    product.get().getName(),
+                    product.get().getBrand(),
+                    product.get().getCategory(),
+                    product.get().getPackageQuantity(),
+                    product.get().getPackageUnit(),
+                    discountedPrice,
+                    price.get().getCurrency(),
+                    discountPercentage,
+                    ((java.sql.Date) row[0]).toLocalDate()
+            ));
+        }
+
         return ResponseEntity.ok(response);
     }
 }

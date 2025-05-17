@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface PriceRepository extends JpaRepository<Price, PriceId> {
     @Query(value = """
@@ -36,4 +37,6 @@ public interface PriceRepository extends JpaRepository<Price, PriceId> {
             @Param("productId") Long productId,
             @Param("targetDate") LocalDate targetDate
     );
+
+    Optional<Price> findPriceById(PriceId id);
 }
