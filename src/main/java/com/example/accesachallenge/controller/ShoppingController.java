@@ -2,6 +2,7 @@ package com.example.accesachallenge.controller;
 
 import com.example.accesachallenge.dto.DiscountDTO;
 import com.example.accesachallenge.dto.ProductDTO;
+import com.example.accesachallenge.dto.UpcomingDiscountDTO;
 import com.example.accesachallenge.model.Price;
 import com.example.accesachallenge.model.PriceId;
 import com.example.accesachallenge.repository.DiscountRepository;
@@ -28,6 +29,14 @@ public class ShoppingController {
     private final ProductRepository productRepository;
     private final PriceRepository priceRepository;
     private final DiscountRepository discountRepository;
+
+    private BigDecimal applyDiscount(BigDecimal price, BigDecimal discount) {
+        BigDecimal multiplier = BigDecimal.ONE.subtract(
+                discount.divide(BigDecimal.valueOf(100),
+                        2, RoundingMode.HALF_UP)
+        );
+        return price.multiply(multiplier);
+    }
 
     // TODO: Don't hardcode date
     private final String currentDate = "2025-05-01";
@@ -100,11 +109,7 @@ public class ShoppingController {
                 continue;
             }
             BigDecimal discountPercentage = (BigDecimal) row[2];
-            BigDecimal multiplier = BigDecimal.ONE.subtract(
-                    discountPercentage.divide(BigDecimal.valueOf(100),
-                            2, RoundingMode.HALF_UP)
-            );
-            BigDecimal discountedPrice = price.get().getPrice().multiply(multiplier);
+            BigDecimal discountedPrice = applyDiscount(price.get().getPrice(), discountPercentage);
             response.add(new DiscountDTO(
                     store.get().getStoreName(),
                     "P" + product.get().getProductId(),
@@ -117,6 +122,33 @@ public class ShoppingController {
                     price.get().getCurrency(),
                     discountPercentage,
                     ((java.sql.Date) row[0]).toLocalDate()
+            ));
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
+    // Returns discounts with the latest start date
+    @PostMapping(value = "/new-discounts",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<UpcomingDiscountDTO>> newDiscounts() {
+        List<UpcomingDiscountDTO> response = new ArrayList<>();
+        var result = discountRepository.findLatestDiscounts();
+        for (var discount : result) {
+            final var store = discount.getStore();
+            final var product = discount.getProduct();
+            response.add(new UpcomingDiscountDTO(
+                    store.getStoreName(),
+                    "P" + product.getProductId(),
+                    product.getName(),
+                    product.getBrand(),
+                    product.getCategory(),
+                    product.getPackageQuantity(),
+                    product.getPackageUnit(),
+                    discount.getDiscountPercentage(),
+                    discount.getId().getStartDate(),
+                    discount.getId().getEndDate()
             ));
         }
 

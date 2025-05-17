@@ -20,4 +20,9 @@ public interface DiscountRepository extends JpaRepository<Discount, DiscountId> 
                  ORDER BY D.DISCOUNT_PERCENTAGE DESC LIMIT 5;
             \s""", nativeQuery = true)
     List<Object[]> findBestDiscounts(@Param("date") LocalDate date);
+
+    @Query(value = """
+            SELECT * FROM DISCOUNTS D WHERE START_DATE = (SELECT MAX(START_DATE) FROM DISCOUNTS D1)
+            """, nativeQuery = true)
+    List<Discount> findLatestDiscounts();
 }

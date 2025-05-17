@@ -46,4 +46,12 @@ public class Discount {
     public void setStore(Store store) {
         this.store = store;
     }
+
+    public Product getProduct() {
+        return product;
+    }
+
+    public Store getStore() {
+        return store;
+    }
 }
