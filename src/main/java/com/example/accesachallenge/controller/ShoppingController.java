@@ -1,16 +1,17 @@
 package com.example.accesachallenge.controller;
 
-import com.example.accesachallenge.dto.DiscountDTO;
-import com.example.accesachallenge.dto.ProductDTO;
-import com.example.accesachallenge.dto.UpcomingDiscountDTO;
-import com.example.accesachallenge.model.Price;
+import com.example.accesachallenge.dto.*;
 import com.example.accesachallenge.model.PriceId;
 import com.example.accesachallenge.repository.DiscountRepository;
 import com.example.accesachallenge.repository.PriceRepository;
 import com.example.accesachallenge.repository.ProductRepository;
 import com.example.accesachallenge.repository.StoreRepository;
+import jakarta.persistence.EntityManager;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,7 +25,6 @@ import java.util.*;
 @RestController
 @RequestMapping("/api")
 public class ShoppingController {
-
     private final StoreRepository storeRepository;
     private final ProductRepository productRepository;
     private final PriceRepository priceRepository;
@@ -151,6 +151,35 @@ public class ShoppingController {
                     discount.getId().getEndDate()
             ));
         }
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Transactional
+    @PostMapping(value = "/product-price-history",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<ProductPriceHistoryDTO>> productPriceHistory(
+            @RequestBody ProductIdRequestDTO productIdDTO) {
+
+        List<ProductPriceHistoryDTO> response = new ArrayList<>();
+
+        var productIdAsLong = Long.parseLong(productIdDTO.productId().substring(1));
+
+        var earliestDate = priceRepository.findEarliestDateOfProductId(productIdAsLong);
+        var latestDate = priceRepository.findLatestDateOfProductId(productIdAsLong);
+
+        earliestDate.datesUntil(latestDate.plusDays(1)).forEach((date) -> {
+            var result = priceRepository.findCheapestPriceWithDiscounts(productIdAsLong, date);
+            if (!result.isEmpty()) {
+                var store = storeRepository.findById((Long) result.get(0)[3]);
+                if (store.isEmpty()) {
+                    return;
+                }
+                response.add(new ProductPriceHistoryDTO(date, store.get().getStoreName(),
+                        (BigDecimal) result.get(0)[2]));
+            }
+        });
 
         return ResponseEntity.ok(response);
     }
