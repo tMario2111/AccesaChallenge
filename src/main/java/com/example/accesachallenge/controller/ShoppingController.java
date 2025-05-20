@@ -217,4 +217,48 @@ public class ShoppingController {
 
         return ResponseEntity.ok(response);
     }
+
+    public record ProductPricePerUnit(String productId, String productName, Double quantity, String unit,
+                                      BigDecimal price) {
+    }
+
+    @PostMapping(value = "/value-per-unit",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> valuePerUnit(@RequestBody List<String> productIds) {
+        List<ProductPricePerUnit> response = new ArrayList<>();
+        for (var id : productIds) {
+            var product = productRepository.findProductByProductId(Long.parseLong(id.substring(1)));
+            if (product.isEmpty()) {
+                continue;
+            }
+
+            var result = priceRepository.findCheapestPriceWithDiscounts(Long.parseLong(id.substring(1)),
+                    LocalDate.parse(currentDate));
+            if (result.isEmpty()) {
+                continue;
+            }
+
+            var price = (BigDecimal) result.get(0)[2];
+            var packageUnit = product.get().getPackageUnit();
+            BigDecimal packageQuantity = BigDecimal.valueOf(product.get().getPackageQuantity());
+
+            BigDecimal normalizationFactor = switch (packageUnit) {
+                case "g", "ml" -> new BigDecimal("1000");
+                default -> BigDecimal.ONE;
+            };
+
+            BigDecimal pricePerUnit = price.divide(packageQuantity, 4, RoundingMode.HALF_UP);
+            BigDecimal normalizedPrice = pricePerUnit.multiply(normalizationFactor);
+
+            String newUnit = switch (packageUnit) {
+                case "g", "kg" -> "kg";
+                case "ml", "l" -> "l";
+                default -> packageUnit;
+            };
+            response.add(new ProductPricePerUnit(id, product.get().getName(), 1.0, newUnit, normalizedPrice));
+        }
+
+        return ResponseEntity.ok(response);
+    }
 }
