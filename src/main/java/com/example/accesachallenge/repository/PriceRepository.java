@@ -59,4 +59,17 @@ public interface PriceRepository extends JpaRepository<Price, PriceId> {
             SELECT P.DATE FROM PRICES P WHERE P.PRODUCT_ID = :productId ORDER BY P.DATE DESC LIMIT 1
             """, nativeQuery = true)
     LocalDate findLatestDateOfProductId(@Param("productId") Long productId);
+
+    @Query(value = """
+            SELECT P.DATE, AVG(P.PRICE) FROM PRICES P JOIN PRODUCTS PD ON P.PRODUCT_ID = PD.PRODUCT_ID\s
+            WHERE (:storeId IS NULL OR P.STORE_ID = :storeId) AND
+            (:brand IS NULL OR PD.BRAND = :brand) AND
+            (:category IS NULL OR PD.CATEGORY = :category)
+            GROUP BY P.DATE;
+            """, nativeQuery = true)
+    List<Object[]> findFilteredPriceHistory(
+            @Param("storeId") Long storeId,
+            @Param("brand") String brand,
+            @Param("category") String category
+    );
 }

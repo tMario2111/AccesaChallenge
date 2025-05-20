@@ -183,4 +183,38 @@ public class ShoppingController {
 
         return ResponseEntity.ok(response);
     }
+
+    public record DatePrice(LocalDate date, BigDecimal price) {
+    }
+
+    @PostMapping(value = "/filtered-product-price-history",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> filteredProductPriceHistory(
+            @RequestBody FilteredProductPriceHistoryDTO dto) {
+        List<DatePrice> response = new ArrayList<>();
+        if (dto.brand() == null && dto.category() == null &&
+                dto.storeName() == null) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "At least one filter (store, brand, or category) is required!"));
+        }
+
+        if (dto.brand() != null && dto.category() != null) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Cannot use both brand and category filters!"));
+        }
+
+        var store = storeRepository.findByStoreName(dto.storeName());
+        if (store.isEmpty() && dto.storeName() != null) {
+            return ResponseEntity.badRequest().body(response);
+        }
+        var storeId = (dto.storeName() == null) ? null : store.get().getStoreId();
+
+        var result = priceRepository.findFilteredPriceHistory(storeId, dto.brand(), dto.category());
+        for (var row : result) {
+            response.add(new DatePrice(((java.sql.Date) row[0]).toLocalDate(), (BigDecimal) row[1]));
+        }
+
+        return ResponseEntity.ok(response);
+    }
 }
