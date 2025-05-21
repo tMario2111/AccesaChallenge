@@ -36,7 +36,6 @@ public class ShoppingController {
         return price.multiply(multiplier);
     }
 
-    // TODO: Don't hardcode date
     private final String currentDate = "2025-05-01";
 
     public ShoppingController(StoreRepository storeRepository,
