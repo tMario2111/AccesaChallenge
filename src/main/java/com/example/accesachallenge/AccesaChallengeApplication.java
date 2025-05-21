@@ -1,10 +1,7 @@
 package com.example.accesachallenge;
 
 import com.example.accesachallenge.model.*;
-import com.example.accesachallenge.repository.DiscountRepository;
-import com.example.accesachallenge.repository.PriceRepository;
-import com.example.accesachallenge.repository.ProductRepository;
-import com.example.accesachallenge.repository.StoreRepository;
+import com.example.accesachallenge.repository.*;
 import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReaderBuilder;
 import org.springframework.boot.CommandLineRunner;
@@ -26,16 +23,19 @@ public class AccesaChallengeApplication implements CommandLineRunner {
     private final ProductRepository productRepository;
     private final PriceRepository priceRepository;
     private final DiscountRepository discountRepository;
+    private final PriceAlertRepository priceAlertRepository;
 
     public AccesaChallengeApplication(StoreRepository storeRepository,
                                       ProductRepository productRepository,
                                       PriceRepository priceRepository,
-                                      DiscountRepository discountRepository) {
+                                      DiscountRepository discountRepository,
+                                      PriceAlertRepository priceAlertRepository) {
 
         this.storeRepository = storeRepository;
         this.productRepository = productRepository;
         this.priceRepository = priceRepository;
         this.discountRepository = discountRepository;
+        this.priceAlertRepository = priceAlertRepository;
     }
 
     public static void main(String[] args) {
@@ -134,6 +134,7 @@ public class AccesaChallengeApplication implements CommandLineRunner {
     public void run(String... args) throws Exception {
 
         // Clear the database and load the data from the .csv files
+        priceAlertRepository.deleteAll();
         priceRepository.deleteAll();
         discountRepository.deleteAll();
         productRepository.deleteAll();

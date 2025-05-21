@@ -1,16 +1,13 @@
 package com.example.accesachallenge.controller;
 
 import com.example.accesachallenge.dto.*;
+import com.example.accesachallenge.model.Price;
+import com.example.accesachallenge.model.PriceAlert;
+import com.example.accesachallenge.model.PriceAlertId;
 import com.example.accesachallenge.model.PriceId;
-import com.example.accesachallenge.repository.DiscountRepository;
-import com.example.accesachallenge.repository.PriceRepository;
-import com.example.accesachallenge.repository.ProductRepository;
-import com.example.accesachallenge.repository.StoreRepository;
-import jakarta.persistence.EntityManager;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.accesachallenge.repository.*;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -29,6 +26,7 @@ public class ShoppingController {
     private final ProductRepository productRepository;
     private final PriceRepository priceRepository;
     private final DiscountRepository discountRepository;
+    private final PriceAlertRepository priceAlertRepository;
 
     private BigDecimal applyDiscount(BigDecimal price, BigDecimal discount) {
         BigDecimal multiplier = BigDecimal.ONE.subtract(
@@ -44,11 +42,13 @@ public class ShoppingController {
     public ShoppingController(StoreRepository storeRepository,
                               ProductRepository productRepository,
                               PriceRepository priceRepository,
-                              DiscountRepository discountRepository) {
+                              DiscountRepository discountRepository,
+                              PriceAlertRepository priceAlertRepository) {
         this.storeRepository = storeRepository;
         this.productRepository = productRepository;
         this.priceRepository = priceRepository;
         this.discountRepository = discountRepository;
+        this.priceAlertRepository = priceAlertRepository;
     }
 
     @PostMapping(value = "/optimize-shopping-list",
@@ -257,6 +257,73 @@ public class ShoppingController {
                 default -> packageUnit;
             };
             response.add(new ProductPricePerUnit(id, product.get().getName(), 1.0, newUnit, normalizedPrice));
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
+    public record ProductUserIdDTO(Long userId, String productId) {
+    }
+
+    @PostMapping(value = "/add-price-alert",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> addPriceAlert(@RequestBody ProductUserIdDTO dto) {
+        var productId = Long.parseLong(dto.productId.substring(1));
+        var product = productRepository.findProductByProductId(productId);
+        if (product.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        var result = priceRepository.findCheapestPriceWithDiscounts(productId, LocalDate.parse(currentDate));
+        if (result.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        var priceAlertId = new PriceAlertId(dto.userId(), productId);
+
+        var newPriceAlert = new PriceAlert();
+        newPriceAlert.setId(priceAlertId);
+        newPriceAlert.setProduct(product.get());
+        newPriceAlert.setCurrentPrice((BigDecimal) result.get(0)[2]);
+        priceAlertRepository.save(newPriceAlert);
+
+        return ResponseEntity.ok().build();
+    }
+
+    public record UserIdDTO(Long userId) {
+    }
+
+    @PostMapping(value = "/fetch-price-alerts",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> fetchPriceAlerts(@RequestBody UserIdDTO dto) {
+        record ProductStorePrice(String productId, String storeName, BigDecimal price) {
+        }
+
+        var response = new ArrayList<ProductStorePrice>();
+
+        var alerts = priceAlertRepository.findById_UserId(dto.userId);
+        for (var alert : alerts) {
+            // Simulate another date
+            var result = priceRepository.findCheapestPriceWithDiscounts(alert.getId().getProductId(),
+                    LocalDate.parse("2025-05-08"));
+            if (result.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            var newPrice = (BigDecimal) result.get(0)[2];
+            if (newPrice.compareTo(alert.getCurrentPrice()) >= 0)
+                continue;
+
+            var store = storeRepository.findById((Long) result.get(0)[3]);
+            if (store.isEmpty()) {
+                continue;
+            }
+
+            response.add(new ProductStorePrice("P" + alert.getId().getProductId(), store.get().getStoreName(),
+                    (BigDecimal) result.get(0)[2]));
+            priceAlertRepository.delete(alert);
         }
 
         return ResponseEntity.ok(response);
