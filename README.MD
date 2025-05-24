@@ -50,12 +50,12 @@ Content-Type: application/json
 
 ### /best-discounts
 ```http request
-POST http://localhost:8080/api/best-discounts
+GET http://localhost:8080/api/best-discounts
 ```
 
 ### /new-discounts
 ```http request
-POST http://localhost:8080/api/new-discounts
+GET http://localhost:8080/api/new-discounts
 ```
 
 ### /product-price-history

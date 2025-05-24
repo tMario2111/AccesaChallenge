@@ -9,10 +9,7 @@ import com.example.accesachallenge.repository.*;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -86,9 +83,7 @@ public class ShoppingController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping(value = "/best-discounts",
-            consumes = MediaType.APPLICATION_JSON_VALUE,
-            produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/best-discounts")
     public ResponseEntity<List<DiscountDTO>> bestDiscounts() {
         List<DiscountDTO> response = new ArrayList<>();
         var result = discountRepository.findBestDiscounts(LocalDate.parse(currentDate));
@@ -128,9 +123,8 @@ public class ShoppingController {
     }
 
     // Returns discounts with the latest start date
-    @PostMapping(value = "/new-discounts",
-            consumes = MediaType.APPLICATION_JSON_VALUE,
-            produces = MediaType.APPLICATION_JSON_VALUE)
+    // If there are discounts added in the last 24h, these are returned
+    @GetMapping(value = "/new-discounts")
     public ResponseEntity<List<UpcomingDiscountDTO>> newDiscounts() {
         List<UpcomingDiscountDTO> response = new ArrayList<>();
         var result = discountRepository.findLatestDiscounts();
